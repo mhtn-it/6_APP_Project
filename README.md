@@ -15,12 +15,12 @@
 **Output**: 
 
 **Ý nghĩa thực tế của ứng dụng**:
-- 
-- 
+- Ý nghĩa 1
+- Ý nghĩa 2
 
 **Lý do cần tăng tốc**: 
-- 
-- 
+- Lý do 1
+- Lý do 2
 
 Kế hoạch nhóm, phân chia công việc: [Google Sheet](https://docs.google.com/spreadsheets/d/1lNRWbRRnsN0L1bEBLm2tHkauJC2jS9DPZiZfhLQ9Av8/edit?usp=sharing)
 
