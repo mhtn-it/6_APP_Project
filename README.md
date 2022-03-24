@@ -24,6 +24,6 @@
 
 Kế hoạch nhóm, phân chia công việc: [Google Sheet](https://docs.google.com/spreadsheets/d/1lNRWbRRnsN0L1bEBLm2tHkauJC2jS9DPZiZfhLQ9Av8/edit?usp=sharing)
 
-Link Colab thực thi: [Seam Carving](https://colab.research.google.com/drive/1h7WyF9mj1uIR7VtJA1sHw-VW6Dz8TOze)
+Link Colab thực thi: [Google Colab](https://colab.research.google.com/github/mhtn-it/6_APP_Project/blob/main/Report.ipynb)
 
 ## Tài liệu tham khảo
