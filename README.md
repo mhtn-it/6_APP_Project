@@ -34,3 +34,5 @@
 - Khi xử lý hàng loạt, số lượng lớn thì thời gian sẽ rất lâu
 
 ## Tài liệu tham khảo
+- Project: Poisson Matting, [github](https://github.com/avani17101/Poisson-Matting).
+- Paper: Poisson Matting của Juan Sun, Jiaya Jia, Chi-Keung Tang, Heung-Yeung Shum, [paper](http://www.cse.cuhk.edu.hk/~leojia/all_final_papers/matting_siggraph04.pdf)
