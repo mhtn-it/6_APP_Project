@@ -4,7 +4,7 @@ import os
 import scipy
 from  scipy import ndimage
 from numba import jit
-IMAGES_FOLDER_PATH = "../Data/"
+IMAGES_FOLDER_PATH = "../Data/Input"
 
 def calc_masks(tri, img_gray):
     """
@@ -255,7 +255,7 @@ alpha = all_data['alpha']
 new_img_global = alpha_blend(new_bg,alpha,img)
 
 new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/output/output_4_global_jit.png', new_img_global)
+cv2.imwrite('../Data/Output/output_4_global_jit.png', new_img_global)
 
 all_data_2 = all_data.copy()
 local_matte =  all_data_2['alpha'].copy()
@@ -270,4 +270,23 @@ local_matte = np.minimum(np.maximum(local_matte,0),1)
 new_img_local = alpha_blend(new_bg,local_matte,img)
 
 new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/output/output_4_local_jit.png', new_img_local)
+cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
+
+# # [347, 475, 130, 195]; [367, 480, 386, 439]
+# cnt = int(input('So luong khu vuc muon cai thien: '))
+# if (cnt >= 0):
+#     all_data_2 = all_data.copy()
+#     local_matte =  all_data_2['alpha'].copy()
+#     for i in range(cnt):
+#         print("Khu vuc ", i + 1)
+#         top = int(input('Top: '))
+#         bottom = int(input('Bottom: '))
+#         left = int(input('Left: '))
+#         right = int(input('Right: '))
+#         printf("-----")
+#         local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+#         all_data_2['local_matte'] = local_matte
+#     local_matte = np.minimum(np.maximum(local_matte,0),1)
+#     new_img_local = alpha_blend(new_bg,local_matte,img)
+#     new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
+#     cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
