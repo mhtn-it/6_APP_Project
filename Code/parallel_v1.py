@@ -3,7 +3,8 @@ import cv2
 import os
 import scipy
 from  scipy import ndimage
-from numba import jit
+from numba import jit, cuda
+import math
 IMAGES_FOLDER_PATH = "../Data/Input"
 
 def calc_masks(tri, img_gray):
@@ -65,7 +66,20 @@ def fb(img_gray,mask_fg,mask_bg,mask_unknown):
     B = img_gray*(mask_bg+mask_unknown)
     return F, B
 
-def global_alpha_matting(alpha, d2alpha, unknown_seg,iters = 50, threshold = 0.1, beta = 1):
+@cuda.jit
+def compute_alpha(alpha, beta, prev_alpha, d2alpha, unknown_seg):
+    """
+
+    """
+    c, r = cuda.grid(2)
+    if r < alpha.shape[0] and c < alpha.shape[1]:
+        for c in range(1,alpha.shape[0]-1):
+            for r in range(1,alpha.shape[1]-1):
+                if unknown_seg[r,c]!=0 :
+                    alpha[r,c] = ((beta*(alpha[r,c-1]+alpha[r-1,c]+prev_alpha[r,c+1]+prev_alpha[r+1,c] - d2alpha[r,c])/4) + (1-beta)*prev_alpha[r,c])
+    
+
+def global_alpha_matting(alpha, d2alpha, unknown_seg, width, height, iters = 50, threshold = 0.1, beta = 1):
     """
     Hàm thực thi global alpha matting
 
@@ -80,19 +94,19 @@ def global_alpha_matting(alpha, d2alpha, unknown_seg,iters = 50, threshold = 0.1
 
     Return:
     -----------
-    Mảng numpy đại diện cho chỉ số matte đã được tạo và thời gian thực thi
+    Mảng numpy đại diện cho chỉ số matte đã được tạo
     """
     prev_alpha = np.zeros(alpha.shape)
     diff = np.sum(np.abs(prev_alpha-alpha))
     
+    block_size = (32, 32)
+    grid_size = (math.ceil(height / block_size[0]), math.ceil(width / block_size[1]))
+
     for _ in range(iters):
         diff = np.sum(np.abs(prev_alpha-alpha))
         if diff < threshold:
             break
-        for i in range(1,alpha.shape[0]-1):
-            for j in range(1,alpha.shape[1]-1):
-                if unknown_seg[i,j]!=0 :
-                    alpha[i,j] = ((beta*(alpha[i,j-1]+alpha[i-1,j]+prev_alpha[i,j+1]+prev_alpha[i+1,j] - d2alpha[i,j])/4) + (1-beta)*prev_alpha[i,j])
+        compute_alpha[grid_size, block_size](alpha, beta, prev_alpha, d2alpha, unknown_seg)
     return alpha
 
 def grads(F,B,mask_fg,img_gray,mask_unknown):
@@ -158,7 +172,7 @@ def matting_combined(tri, img_gray):
     """
     estimate_alpha, F, B, d2alpha, imgs, diff = func_estimate_alpha(tri, img_gray)
     mask_fg,fg,mask_bg,bg,mask_unknown,unknown = imgs
-    alpha = global_alpha_matting(estimate_alpha,d2alpha,mask_unknown)
+    alpha = global_alpha_matting(estimate_alpha,d2alpha,mask_unknown, estimate_alpha.shape[1], estimate_alpha.shape[0])
     alpha = np.minimum(np.maximum(alpha,0),1)
 
     return {'alpha': alpha, 'F':F, 'B': B, 'diff': diff, 'unknown': unknown, 'mask_unknown': mask_unknown}
@@ -183,6 +197,8 @@ def alpha_blend(new_bg,alpha,img):
     new_img[:,:,2] = alpha*img[:,:,2] + (1-alpha)*new_bg[:,:,2]
     return np.float32(new_img)
 
+
+# Copy mảng local ra 1 mảng riêng biệt chứ không dùng chỉ mục của mảng global
 def local_matting(data_dic, top, bottom, left, right):
     """
     Hàm Local Matting sử dụng Matte do Global Matting cung cấp và 
@@ -232,7 +248,13 @@ def local_matting(data_dic, top, bottom, left, right):
     weighted_bg = required_alpha*(bg_d2x+bg_d2y)
     new_d2alpha = img_d2x + img_d2y - weighted_fg - weighted_bg
 
-    matte = global_alpha_matting(required_alpha,new_d2alpha,required_mask_unknown, iters= 50, threshold = 0.1, beta = 0.2)
+    # r_alpha = np.empty((required_alpha.shape[0], required_alpha.shape[1]), dtype=type(required_alpha))
+    # n_d2alpha = np.empty((new_d2alpha.shape[0], new_d2alpha.shape[1]), dtype=type(new_d2alpha))
+    # r_mask_unknown = np.empty((required_mask_unknown.shape[0], required_mask_unknown.shape[1]), dtype=type(required_mask_unknown))
+
+    # r_alpha = required_alpha[top:bottom+1, left:right+1]
+    print(required_alpha.shape())
+    matte = global_alpha_matting(required_alpha,new_d2alpha,required_mask_unknown, right - left + 1, top - bottom + 1, iters= 50, threshold = 0.1, beta = 0.2)
     matte = np.minimum(np.maximum(matte,0),1)
     return matte
 
@@ -254,23 +276,23 @@ alpha = all_data['alpha']
 new_img_global = alpha_blend(new_bg,alpha,img)
 
 new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/Output/output_4_global.png', new_img_global)
+cv2.imwrite('../Data/Output/output_4_global_parallel.png', new_img_global)
 print("====SUCCESS GLOBAL MATTING====")
 
 all_data_2 = all_data.copy()
 local_matte =  all_data_2['alpha'].copy()
 top,bottom,left,right = [347, 475, 130, 195]
-local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
 all_data_2['local_matte'] = local_matte
 top,bottom,left,right = [367, 480, 386, 439]
-local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
 all_data_2['local_matte'] = local_matte
 local_matte = np.minimum(np.maximum(local_matte,0),1)
 
 new_img_local = alpha_blend(new_bg,local_matte,img)
 
 new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
+cv2.imwrite('../Data/Output/output_4_local_parallel.png', new_img_local)
 print("====SUCCESS LOCAL MATTING====")
 
 # # [347, 475, 130, 195]; [367, 480, 386, 439]
@@ -290,4 +312,4 @@ print("====SUCCESS LOCAL MATTING====")
 #     local_matte = np.minimum(np.maximum(local_matte,0),1)
 #     new_img_local = alpha_blend(new_bg,local_matte,img)
 #     new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-#     cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
+#     cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)

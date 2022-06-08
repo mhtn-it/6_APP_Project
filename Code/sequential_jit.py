@@ -256,6 +256,7 @@ new_img_global = alpha_blend(new_bg,alpha,img)
 
 new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
 cv2.imwrite('../Data/Output/output_4_global_jit.png', new_img_global)
+print("====SUCCESS GLOBAL MATTING====")
 
 all_data_2 = all_data.copy()
 local_matte =  all_data_2['alpha'].copy()
@@ -270,7 +271,8 @@ local_matte = np.minimum(np.maximum(local_matte,0),1)
 new_img_local = alpha_blend(new_bg,local_matte,img)
 
 new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
+cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
+print("====SUCCESS LOCAL MATTING====")
 
 # # [347, 475, 130, 195]; [367, 480, 386, 439]
 # cnt = int(input('So luong khu vuc muon cai thien: '))
