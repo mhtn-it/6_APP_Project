@@ -7,6 +7,15 @@ from numba import jit, cuda
 import math
 IMAGES_FOLDER_PATH = "../Data/Input"
 
+@cuda.jit
+def compute_mul_matrix_kerner(A, B, C):
+    """
+
+    """
+    c, r = cuda.grid(2)
+    if r < A.shape[0] and c < A.shape[1]:
+        diff += abs(A[r,c] - B[r,c])
+
 def calc_masks(tri, img_gray):
     """
     Hàm tạo mask để phân vùng Background và Foreground của ảnh trimap
@@ -73,23 +82,9 @@ def compute_alpha_kernel(alpha, beta, prev_alpha, d2alpha, unknown_seg):
     """
     c, r = cuda.grid(2)
     if (r < alpha.shape[0] and r > 0) and (c < alpha.shape[1] and c > 0):
-        # for c in range(1,alpha.shape[0]-1):
-        #     for r in range(1,alpha.shape[1]-1):
                 if unknown_seg[r,c]!=0 :
                     alpha[r,c] = ((beta*(alpha[r,c-1]+alpha[r-1,c]+prev_alpha[r,c+1]+prev_alpha[r+1,c] - d2alpha[r,c])/4) + (1-beta)*prev_alpha[r,c])
     
-@cuda.jit
-def compute_diff_kerner(A, B, diff):
-    """
-
-    """
-    diff = 0
-    c, r = cuda.grid(2)
-    if r < A.shape[0] and c < A.shape[1]:
-        for c in range(1,A.shape[0]-1):
-            for r in range(1,A.shape[1]-1):
-                diff += abs(A[r,c] - B[r,c])
-
 def global_alpha_matting(alpha, d2alpha, unknown_seg, width, height, iters = 50, threshold = 0.1, beta = 1):
     """
     Hàm thực thi global alpha matting
@@ -119,7 +114,7 @@ def global_alpha_matting(alpha, d2alpha, unknown_seg, width, height, iters = 50,
     d_unknown_seg = cuda.to_device(unknown_seg)
 
     for _ in range(iters):
-        compute_diff_kerner[grid_size, block_size](d_alpha, d_prev_alpha, diff)
+        diff = np.sum(np.abs(prev_alpha-alpha))
         if diff < threshold:
             break
         compute_alpha_kernel[grid_size, block_size](d_alpha, beta, d_prev_alpha, d_d2alpha, d_unknown_seg)
