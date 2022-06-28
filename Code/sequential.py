@@ -83,17 +83,19 @@ def global_alpha_matting(alpha, d2alpha, unknown_seg,iters = 50, threshold = 0.1
     Mảng numpy đại diện cho chỉ số matte đã được tạo và thời gian thực thi
     """
     prev_alpha = np.zeros(alpha.shape)
+    new_alpha = alpha.copy()
     diff = np.sum(np.abs(prev_alpha-alpha))
     
     for _ in range(iters):
-        diff = np.sum(np.abs(prev_alpha-alpha))
-        if diff < threshold:
-            break
-        for i in range(1,alpha.shape[0]-1):
-            for j in range(1,alpha.shape[1]-1):
+        # diff = np.sum(np.abs(prev_alpha-new_alpha))
+        # if diff < threshold:
+        #     break
+        prev_alpha = new_alpha.copy()
+        for i in range(1,new_alpha.shape[0]-1):
+            for j in range(1,new_alpha.shape[1]-1):
                 if unknown_seg[i,j]!=0 :
-                    alpha[i,j] = ((beta*(alpha[i,j-1]+alpha[i-1,j]+prev_alpha[i,j+1]+prev_alpha[i+1,j] - d2alpha[i,j])/4) + (1-beta)*prev_alpha[i,j])
-    return alpha
+                    new_alpha[i,j] = ((beta*(new_alpha[i,j-1]+new_alpha[i-1,j]+prev_alpha[i,j+1]+prev_alpha[i+1,j] - d2alpha[i,j])/4) + (1-beta)*prev_alpha[i,j])
+    return new_alpha
 
 def grads(F,B,mask_fg,img_gray,mask_unknown):
     """
@@ -257,21 +259,21 @@ new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
 cv2.imwrite('../Data/Output/output_4_global.png', new_img_global)
 print("====SUCCESS GLOBAL MATTING====")
 
-all_data_2 = all_data.copy()
-local_matte =  all_data_2['alpha'].copy()
-top,bottom,left,right = [347, 475, 130, 195]
-local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-all_data_2['local_matte'] = local_matte
-top,bottom,left,right = [367, 480, 386, 439]
-local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-all_data_2['local_matte'] = local_matte
-local_matte = np.minimum(np.maximum(local_matte,0),1)
+# all_data_2 = all_data.copy()
+# local_matte =  all_data_2['alpha'].copy()
+# top,bottom,left,right = [347, 475, 130, 195]
+# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+# all_data_2['local_matte'] = local_matte
+# top,bottom,left,right = [367, 480, 386, 439]
+# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+# all_data_2['local_matte'] = local_matte
+# local_matte = np.minimum(np.maximum(local_matte,0),1)
 
-new_img_local = alpha_blend(new_bg,local_matte,img)
+# new_img_local = alpha_blend(new_bg,local_matte,img)
 
-new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
-print("====SUCCESS LOCAL MATTING====")
+# new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
+# cv2.imwrite('../Data/Output/output_4_local.png', new_img_local)
+# print("====SUCCESS LOCAL MATTING====")
 
 # # [347, 475, 130, 195]; [367, 480, 386, 439]
 # cnt = int(input('So luong khu vuc muon cai thien: '))
