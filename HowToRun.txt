@@ -1,0 +1,6 @@
+Cách chạy dự án:
+1. Tải toàn bộ dự án từ repo Github: https://github.com/mhtn-it/6_APP_Project
+2. Giải nén dự án vừa tạo được thư mục "6_APP_Project"
+3. Upload thư mục "6_APP_Project" vừa giải nén lên Google Drive cá nhân, để ở ngay đường dẫn chính của drive (không nằm trong thư mục nào)
+4. Mở file Report.ipynb
+5. Chọn Thời gian chạy -> Chạy tất cả để chạy dự án: các ảnh output sẽ được lưu trên drive trong thư mục "6_APP_Project/Data/Output"

@@ -100,24 +100,31 @@ def compute_alpha_kernel_shared(alpha, beta, prev_alpha, d2alpha, unknown_seg):
     by = cuda.blockIdx.y
     tx = cuda.threadIdx.x
     ty = cuda.threadIdx.y
-        
-    if r < alpha.shape[0] and c < alpha.shape[1]:
-        s_alpha[ty, tx] = alpha[by * 32 + ty, bx * 32 + tx]
-        s_prev_alpha[ty, tx] = prev_alpha[by * 32 + ty, bx * 32 + tx]
-        s_d2alpha[ty, tx] = d2alpha[by * 32 + ty, bx * 32 + tx]
-        cuda.syncthreads()
 
+    s_alpha[ty, tx] = alpha[r, c]
+    s_prev_alpha[ty, tx] = prev_alpha[r, c]
+    s_d2alpha[ty, tx] = d2alpha[r, c]
+    cuda.syncthreads()
+
+    if (r < alpha.shape[0] and r > 0) and (c < alpha.shape[1] and c > 0):
         if unknown_seg[r, c]!=0 :
-            if tx != 0 and tx != 31 and ty != 0 and ty != 31:
-                alpha[r,c] = ((beta*(s_alpha[ty, tx -1]+s_alpha[ty-1, tx ]+s_prev_alpha[ty, tx +1]+s_prev_alpha[ty+1, tx ] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
-            # elif tx == 0:
-            #     alpha[r,c] = ((beta*(alpha[r, c -1]+s_alpha[ty-1, tx ]+s_prev_alpha[ty, tx +1]+s_prev_alpha[ty+1, tx ] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
-            # elif tx == 31:
-            #     alpha[r,c] = ((beta*(s_alpha[ty, tx -1]+s_alpha[ty-1, tx ]+prev_alpha[r, c +1]+s_prev_alpha[ty+1, tx ] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
-            # elif ty == 0:
-            #     alpha[r,c] = ((beta*(s_alpha[ty, tx -1]+alpha[r-1, c]+s_prev_alpha[ty, tx +1]+s_prev_alpha[ty+1, tx ] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
-            # elif ty == 31:
-            #     alpha[r,c] = ((beta*(s_alpha[ty, tx -1]+s_alpha[ty-1, tx ]+s_prev_alpha[ty, tx +1]+s_prev_alpha[r+1, c] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
+            a_temp = s_alpha[ty, tx -1]
+            b_temp = s_alpha[ty-1, tx]
+            c_temp = s_prev_alpha[ty, tx +1]
+            d_temp = s_prev_alpha[ty+1, tx]
+            
+            # if tx != 0 and tx != 31 and ty != 0 and ty != 31:
+            #     alpha[r,c] = ((beta*(a_temp + b_temp + c_temp + d_temp - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
+            #     alpha[r,c] = ((beta*(s_alpha[ty, tx -1]+s_alpha[ty-1, tx ]+s_prev_alpha[ty, tx +1]+s_prev_alpha[ty+1, tx ] - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
+            if tx == 0:
+                a_temp = alpha[r, c - 1]
+            if ty == 0:
+                b_temp = alpha[r - 1, c]
+            if tx == 31:
+                c_temp = prev_alpha[r, c + 1]
+            if ty == 31:
+                d_temp = prev_alpha[r + 1, c]
+            alpha[r,c] = ((beta*(a_temp + b_temp + c_temp + d_temp - s_d2alpha[ty, tx ])/4) + (1-beta)*s_prev_alpha[ty, tx ])
 
 def global_alpha_matting_shared(alpha, d2alpha, unknown_seg, width, height, iters = 50, threshold = 0.1, beta = 1):
     """
@@ -348,37 +355,24 @@ new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
 cv2.imwrite('../Data/Output/output_4_global_parallel_v1.png', new_img_global)
 print("====SUCCESS GLOBAL MATTING====")
 
-# all_data_2 = all_data.copy()
-# local_matte =  all_data_2['alpha'].copy()
-# top,bottom,left,right = [347, 475, 130, 195]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# top,bottom,left,right = [367, 480, 386, 439]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# local_matte = np.minimum(np.maximum(local_matte,0),1)
+all_data_2 = all_data.copy()
+local_matte =  all_data_2['alpha'].copy()
+top,bottom,left,right = [390, 480, 110 ,145]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [212, 240, 118, 150]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [135, 155, 145, 170]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [0, 20, 370, 435]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+local_matte = np.minimum(np.maximum(local_matte,0),1)
 
-# new_img_local = alpha_blend(new_bg,local_matte,img)
+new_img_local = alpha_blend(new_bg,local_matte,img)
 
-# new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-# cv2.imwrite('../Data/Output/output_4_local_parallel_v1.png', new_img_local)
-# print("====SUCCESS LOCAL MATTING====")
-
-# # [347, 475, 130, 195]; [367, 480, 386, 439]
-# cnt = int(input('So luong khu vuc muon cai thien: '))
-# if (cnt >= 0):
-#     all_data_2 = all_data.copy()
-#     local_matte =  all_data_2['alpha'].copy()
-#     for i in range(cnt):
-#         print("Khu vuc ", i + 1)
-#         top = int(input('Top: '))
-#         bottom = int(input('Bottom: '))
-#         left = int(input('Left: '))
-#         right = int(input('Right: '))
-#         printf("-----")
-#         local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-#         all_data_2['local_matte'] = local_matte
-#     local_matte = np.minimum(np.maximum(local_matte,0),1)
-#     new_img_local = alpha_blend(new_bg,local_matte,img)
-#     new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-#     cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
+new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
+cv2.imwrite('../Data/Output/output_4_local_parallel_v1.png', new_img_local)
+print("====SUCCESS LOCAL MATTING====")

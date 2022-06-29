@@ -234,7 +234,7 @@ def local_matting(data_dic, top, bottom, left, right):
     weighted_bg = required_alpha*(bg_d2x+bg_d2y)
     new_d2alpha = img_d2x + img_d2y - weighted_fg - weighted_bg
 
-    matte = global_alpha_matting(required_alpha,new_d2alpha,required_mask_unknown, iters= 50, threshold = 0.1, beta = 0.2)
+    matte = global_alpha_matting_jit(required_alpha,new_d2alpha,required_mask_unknown, iters= 50, threshold = 0.1, beta = 0.2)
     matte = np.minimum(np.maximum(matte,0),1)
     return matte
 
@@ -259,37 +259,24 @@ new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
 cv2.imwrite('../Data/Output/output_4_global_jit.png', new_img_global)
 print("====SUCCESS GLOBAL MATTING====")
 
-# all_data_2 = all_data.copy()
-# local_matte =  all_data_2['alpha'].copy()
-# top,bottom,left,right = [347, 475, 130, 195]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# top,bottom,left,right = [367, 480, 386, 439]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# local_matte = np.minimum(np.maximum(local_matte,0),1)
+all_data_2 = all_data.copy()
+local_matte =  all_data_2['alpha'].copy()
+top,bottom,left,right = [465, 480, 120 ,150]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [212, 240, 118, 150]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [135, 155, 145, 170]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [0, 20, 370, 435]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+local_matte = np.minimum(np.maximum(local_matte,0),1)
 
-# new_img_local = alpha_blend(new_bg,local_matte,img)
+new_img_local = alpha_blend(new_bg,local_matte,img)
 
-# new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-# cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
-# print("====SUCCESS LOCAL MATTING====")
-
-# # [347, 475, 130, 195]; [367, 480, 386, 439]
-# cnt = int(input('So luong khu vuc muon cai thien: '))
-# if (cnt >= 0):
-#     all_data_2 = all_data.copy()
-#     local_matte =  all_data_2['alpha'].copy()
-#     for i in range(cnt):
-#         print("Khu vuc ", i + 1)
-#         top = int(input('Top: '))
-#         bottom = int(input('Bottom: '))
-#         left = int(input('Left: '))
-#         right = int(input('Right: '))
-#         printf("-----")
-#         local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
-#         all_data_2['local_matte'] = local_matte
-#     local_matte = np.minimum(np.maximum(local_matte,0),1)
-#     new_img_local = alpha_blend(new_bg,local_matte,img)
-#     new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-#     cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
+new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
+cv2.imwrite('../Data/Output/output_4_local_jit.png', new_img_local)
+print("====SUCCESS LOCAL MATTING====")

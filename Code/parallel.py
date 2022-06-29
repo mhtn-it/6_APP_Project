@@ -82,10 +82,10 @@ def compute_alpha_kernel(alpha, beta, prev_alpha, d2alpha, unknown_seg):
     """
     c, r = cuda.grid(2)
     if (r < alpha.shape[0] and r > 0) and (c < alpha.shape[1] and c > 0):
-            if unknown_seg[r,c]!=0 :
-                alpha[r,c] = ((beta*(alpha[r,c-1]+alpha[r-1,c]+prev_alpha[r,c+1]+prev_alpha[r+1,c] - d2alpha[r,c])/4) + (1-beta)*prev_alpha[r,c])
+        if unknown_seg[r,c]!=0 :
+            alpha[r,c] = ((beta*(alpha[r,c-1]+alpha[r-1,c]+prev_alpha[r,c+1]+prev_alpha[r+1,c] - d2alpha[r,c])/4) + (1-beta)*prev_alpha[r,c])
 
-def global_alpha_matting(alpha, d2alpha, unknown_seg, width, height, iters = 50, threshold = 0.1, beta = 1):
+def global_alpha_matting_kernel(alpha, d2alpha, unknown_seg, width, height, iters = 50, threshold = 0.1, beta = 1):
     """
     Hàm thực thi global alpha matting
 
@@ -120,7 +120,7 @@ def global_alpha_matting(alpha, d2alpha, unknown_seg, width, height, iters = 50,
     return alpha
 
 @jit
-def global_alpha_matting_jit(alpha, d2alpha, unknown_seg,iters = 50, threshold = 0.1, beta = 1):
+def global_alpha_matting_host(alpha, d2alpha, unknown_seg,iters = 50, threshold = 0.1, beta = 1):
     """
     Hàm thực thi global alpha matting
 
@@ -214,7 +214,7 @@ def matting_combined(tri, img_gray):
     """
     estimate_alpha, F, B, d2alpha, imgs, diff = func_estimate_alpha(tri, img_gray)
     mask_fg,fg,mask_bg,bg,mask_unknown,unknown = imgs
-    alpha = global_alpha_matting(estimate_alpha,d2alpha,mask_unknown, estimate_alpha.shape[1], estimate_alpha.shape[0])
+    alpha = global_alpha_matting_kernel(estimate_alpha,d2alpha,mask_unknown, estimate_alpha.shape[1], estimate_alpha.shape[0])
     alpha = np.minimum(np.maximum(alpha,0),1)
 
     return {'alpha': alpha, 'F':F, 'B': B, 'diff': diff, 'unknown': unknown, 'mask_unknown': mask_unknown}
@@ -289,7 +289,7 @@ def local_matting(data_dic, top, bottom, left, right):
     weighted_fg = required_alpha*(fg_d2x+fg_d2y)
     weighted_bg = required_alpha*(bg_d2x+bg_d2y)
     new_d2alpha = img_d2x + img_d2y - weighted_fg - weighted_bg
-    matte = global_alpha_matting_jit(required_alpha,new_d2alpha,required_mask_unknown, iters= 50, threshold = 0.1, beta = 0.2)
+    matte = global_alpha_matting_host(required_alpha,new_d2alpha,required_mask_unknown, iters= 50, threshold = 0.1, beta = 0.2)
     matte = np.minimum(np.maximum(matte,0),1)
     return matte
 
@@ -314,18 +314,24 @@ new_img_global = cv2.cvtColor(new_img_global, cv2.COLOR_RGB2BGR)
 cv2.imwrite('../Data/Output/output_4_global_parallel.png', new_img_global)
 print("====SUCCESS GLOBAL MATTING====")
 
-# all_data_2 = all_data.copy()
-# local_matte =  all_data_2['alpha'].copy()
-# top,bottom,left,right = [347, 475, 130, 195]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# top,bottom,left,right = [367, 480, 386, 439]
-# local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2, top, bottom, left, right)
-# all_data_2['local_matte'] = local_matte
-# local_matte = np.minimum(np.maximum(local_matte,0),1)
+all_data_2 = all_data.copy()
+local_matte =  all_data_2['alpha'].copy()
+top,bottom,left,right = [390, 480, 110 ,145]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [212, 240, 118, 150]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [135, 155, 145, 170]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+top,bottom,left,right = [0, 20, 370, 435]
+local_matte[top:bottom+1, left:right+1] = local_matting(all_data_2.copy(), top, bottom, left, right)
+all_data_2['local_matte'] = local_matte
+local_matte = np.minimum(np.maximum(local_matte,0),1)
 
-# new_img_local = alpha_blend(new_bg,local_matte,img)
+new_img_local = alpha_blend(new_bg,local_matte,img)
 
-# new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
-# cv2.imwrite('../Data/Output/output_4_local_parallel.png', new_img_local)
-# print("====SUCCESS LOCAL MATTING====")
+new_img_local = cv2.cvtColor(new_img_local, cv2.COLOR_RGB2BGR)
+cv2.imwrite('../Data/Output/output_4_local_parallel.png', new_img_local)
+print("====SUCCESS LOCAL MATTING====")
